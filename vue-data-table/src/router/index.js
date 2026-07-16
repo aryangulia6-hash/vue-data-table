@@ -10,17 +10,22 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      component: InventoryView
+      name: "Inventory",
+      component: InventoryView,
     },
+
     {
       path: "/employee",
-      component: EmployeeView
+      name: "Employee",
+      component: EmployeeView,
     },
+
     {
       path: "/library",
-      component: LibraryView
-    }
-  ]
+      name: "Library",
+      component: LibraryView,
+    },
+  ],
 });
 
 export default router;

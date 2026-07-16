@@ -1,206 +1,468 @@
 <template>
   <div class="table-container">
+
+    <!-- Search -->
+    <div class="search-box">
+      <input
+        v-model="search"
+        type="text"
+        placeholder="🔍 Search..."
+      />
+    </div>
+
+    <!-- Table -->
     <table>
+
       <thead>
+
         <tr>
+
           <th
             v-for="column in columns"
             :key="column.key"
             @click="sortBy(column.key)"
             class="sortable"
           >
+
             {{ column.label }}
 
             <span v-if="sortKey === column.key">
-              {{ sortDirection === "asc" ? " ▲" : " ▼" }}
+              {{ sortDirection === 'asc' ? ' ▲' : ' ▼' }}
             </span>
+
           </th>
 
           <th>Actions</th>
+
         </tr>
+
       </thead>
 
       <tbody>
-        <tr v-for="(row, index) in paginatedRows" :key="index">
+
+        <tr
+          v-for="(row,index) in paginatedRows"
+          :key="index"
+        >
+
           <td
             v-for="column in columns"
             :key="column.key"
           >
+
             <!-- Scoped Slot -->
+
             <slot
               :name="column.key"
               :row="row"
             >
+
               {{ row[column.key] }}
+
             </slot>
+
           </td>
 
           <td>
-            <button @click="$emit('edit', row)">Edit</button>
-            <button @click="$emit('delete', row)">Delete</button>
+
+            <button
+              class="btn btn-edit"
+              @click="$emit('edit',row)"
+            >
+              ✏ Edit
+            </button>
+
+            <button
+              class="btn btn-delete"
+              @click="$emit('delete',row)"
+            >
+              🗑 Delete
+            </button>
+
           </td>
+
         </tr>
+
+        <tr v-if="paginatedRows.length===0">
+
+          <td
+            :colspan="columns.length+1"
+            style="text-align:center;padding:25px;"
+          >
+
+            No Data Found
+
+          </td>
+
+        </tr>
+
       </tbody>
+
     </table>
 
     <!-- Pagination -->
 
     <div class="pagination">
+
       <button
         @click="previousPage"
-        :disabled="currentPage === 1"
+        :disabled="currentPage===1"
       >
-        Previous
+        ◀ Previous
       </button>
 
       <span>
-        Page {{ currentPage }} of {{ totalPages }}
+
+        Page {{ currentPage }}
+
+        of
+
+        {{ totalPages }}
+
       </span>
 
       <button
         @click="nextPage"
-        :disabled="currentPage === totalPages"
+        :disabled="currentPage===totalPages"
       >
-        Next
+        Next ▶
       </button>
+
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 const props = defineProps({
-  columns: {
-    type: Array,
-    required: true,
+
+  columns:{
+    type:Array,
+    required:true
   },
 
-  rows: {
-    type: Array,
-    required: true,
-  },
+  rows:{
+    type:Array,
+    required:true
+  }
+
 });
 
-defineEmits(["edit", "delete"]);
+defineEmits([
+  "edit",
+  "delete"
+]);
 
-// ---------------------
+// =======================
+// Search
+// =======================
+
+const search=ref("");
+
+// =======================
 // Sorting
-// ---------------------
+// =======================
 
-const sortKey = ref("");
-const sortDirection = ref("asc");
+const sortKey=ref("");
 
-function sortBy(key) {
-  if (sortKey.value === key) {
-    sortDirection.value =
-      sortDirection.value === "asc"
-        ? "desc"
-        : "asc";
-  } else {
-    sortKey.value = key;
-    sortDirection.value = "asc";
+const sortDirection=ref("asc");
+
+function sortBy(key){
+
+  if(sortKey.value===key){
+
+    sortDirection.value=
+      sortDirection.value==="asc"
+      ?"desc"
+      :"asc";
+
   }
+
+  else{
+
+    sortKey.value=key;
+
+    sortDirection.value="asc";
+
+  }
+
 }
 
-const sortedRows = computed(() => {
-  const data = [...props.rows];
+// =======================
+// Filter
+// =======================
 
-  if (!sortKey.value) return data;
+const filteredRows=computed(()=>{
 
-  return data.sort((a, b) => {
-    if (a[sortKey.value] < b[sortKey.value])
-      return sortDirection.value === "asc"
-        ? -1
-        : 1;
+  if(!search.value) return props.rows;
 
-    if (a[sortKey.value] > b[sortKey.value])
-      return sortDirection.value === "asc"
-        ? 1
-        : -1;
+  return props.rows.filter(row=>{
+
+    return Object.values(row)
+
+      .join(" ")
+
+      .toLowerCase()
+
+      .includes(search.value.toLowerCase());
+
+  });
+
+});
+
+// =======================
+// Sort
+// =======================
+
+const sortedRows=computed(()=>{
+
+  const data=[...filteredRows.value];
+
+  if(!sortKey.value) return data;
+
+  return data.sort((a,b)=>{
+
+    if(a[sortKey.value]<b[sortKey.value])
+
+      return sortDirection.value==="asc"?-1:1;
+
+    if(a[sortKey.value]>b[sortKey.value])
+
+      return sortDirection.value==="asc"?1:-1;
 
     return 0;
+
   });
+
 });
 
-// ---------------------
+// =======================
 // Pagination
-// ---------------------
+// =======================
 
-const currentPage = ref(1);
+const rowsPerPage=5;
 
-const rowsPerPage = 10;
+const currentPage=ref(1);
 
-const totalPages = computed(() =>
-  Math.ceil(sortedRows.value.length / rowsPerPage)
-);
+const totalPages=computed(()=>{
 
-const paginatedRows = computed(() => {
-  const start =
-    (currentPage.value - 1) * rowsPerPage;
+  return Math.max(
+
+    1,
+
+    Math.ceil(sortedRows.value.length/rowsPerPage)
+
+  );
+
+});
+
+const paginatedRows=computed(()=>{
+
+  const start=(currentPage.value-1)*rowsPerPage;
 
   return sortedRows.value.slice(
+
     start,
-    start + rowsPerPage
+
+    start+rowsPerPage
+
   );
+
 });
 
-function nextPage() {
-  if (currentPage.value < totalPages.value)
+function nextPage(){
+
+  if(currentPage.value<totalPages.value)
+
     currentPage.value++;
+
 }
 
-function previousPage() {
-  if (currentPage.value > 1)
+function previousPage(){
+
+  if(currentPage.value>1)
+
     currentPage.value--;
+
 }
+
+// Reset page after search/delete/add
+
+watch(
+  () => sortedRows.value.length,
+  () => {
+
+    if(currentPage.value>totalPages.value){
+
+      currentPage.value=totalPages.value;
+
+    }
+
+  }
+);
+
+watch(search,()=>{
+
+  currentPage.value=1;
+
+});
+
 </script>
 
 <style scoped>
-.table-container {
-  margin: 20px;
+
+.table-container{
+
+    background:#fff;
+
+    padding:25px;
+
+    border-radius:15px;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.search-box{
+
+    margin-bottom:20px;
+
 }
 
-th,
-td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  text-align: left;
+.search-box input{
+
+    width:320px;
+
+    padding:12px 15px;
+
+    border:1px solid #ccc;
+
+    border-radius:8px;
+
+    outline:none;
+
 }
 
-th {
-  background: #4f46e5;
-  color: white;
+.search-box input:focus{
+
+    border-color:#2563eb;
+
 }
 
-.sortable {
-  cursor: pointer;
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
 }
 
-tr:nth-child(even) {
-  background: #f7f7f7;
+thead{
+
+    background:#2563eb;
+
+    color:white;
+
 }
 
-button {
-  margin: 3px;
-  padding: 6px 12px;
-  cursor: pointer;
+th{
+
+    padding:15px;
+
+    cursor:pointer;
+
+    user-select:none;
+
 }
 
-.pagination {
-  margin-top: 15px;
+td{
 
-  display: flex;
+    padding:14px;
 
-  justify-content: center;
+    border-bottom:1px solid #eee;
 
-  align-items: center;
-
-  gap: 15px;
 }
+
+tbody tr:hover{
+
+    background:#f8fbff;
+
+}
+
+.btn{
+
+    border:none;
+
+    padding:8px 14px;
+
+    color:white;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+    margin-right:8px;
+
+    transition:.25s;
+
+}
+
+.btn:hover{
+
+    transform:translateY(-2px);
+
+}
+
+.btn-edit{
+
+    background:#2563eb;
+
+}
+
+.btn-delete{
+
+    background:#ef4444;
+
+}
+
+.pagination{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    gap:20px;
+
+    margin-top:20px;
+
+}
+
+.pagination button{
+
+    border:none;
+
+    background:#2563eb;
+
+    color:white;
+
+    padding:10px 18px;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+}
+
+.pagination button:disabled{
+
+    background:#9ca3af;
+
+    cursor:not-allowed;
+
+}
+
 </style>
