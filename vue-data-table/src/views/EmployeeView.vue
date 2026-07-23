@@ -1,13 +1,14 @@
 <template>
   <div class="container">
 
-    <h1 class="page-title">👨‍💼 Employee Payroll</h1>
+    <h1 class="page-title">👨‍💼 Employee Payroll Management</h1>
 
-    <!-- Dashboard Cards -->
+    <!-- Dashboard -->
+
     <div class="cards">
 
       <DashboardCard
-        title="Total Employees"
+        title="Employees"
         :value="employeeData.length"
         icon="👨‍💼"
       />
@@ -24,13 +25,19 @@
         icon="🏢"
       />
 
+      <DashboardCard
+        title="Average Salary"
+        :value="'₹ ' + averageSalary.toLocaleString()"
+        icon="📈"
+      />
+
     </div>
 
-    <!-- Add Employee Form -->
+    <!-- Add Employee -->
 
     <div class="form-card">
 
-      <h2>Add New Employee</h2>
+      <h2>Add Employee</h2>
 
       <div class="form-grid">
 
@@ -45,19 +52,19 @@
         />
 
         <input
-          v-model="newEmployee.salary"
+          v-model.number="newEmployee.salary"
           type="number"
           placeholder="Salary"
         />
 
         <input
-          v-model="newEmployee.tax"
+          v-model.number="newEmployee.tax"
           type="number"
           placeholder="Tax"
         />
 
         <input
-          v-model="newEmployee.netPay"
+          v-model.number="newEmployee.netPay"
           type="number"
           placeholder="Net Pay"
         />
@@ -65,89 +72,172 @@
       </div>
 
       <button
-        class="btn btn-success"
+        class="btn-success"
         @click="addEmployee"
       >
-        Add Employee
+        + Add Employee
       </button>
 
     </div>
 
-    <!-- Data Table -->
+    <!-- Employee Table -->
 
     <BaseDataTable
       :columns="employeeColumns"
       :rows="employeeData"
-      @edit="editEmployee"
-      @delete="deleteEmployee"
+      @edit="openEdit"
+      @delete="openDelete"
+    />
+
+    <!-- Edit Modal -->
+
+    <EditModal
+      :show="showEdit"
+      :row="selectedEmployee"
+      :columns="employeeColumns"
+      @close="showEdit=false"
+      @save="saveEmployee"
+    />
+
+    <!-- Delete Modal -->
+
+    <DeleteModal
+      :show="showDelete"
+      @close="showDelete=false"
+      @confirm="deleteEmployee"
     />
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+
+import { ref, computed, watch, onMounted } from "vue";
 
 import BaseDataTable from "../components/BaseDataTable.vue";
 import DashboardCard from "../components/DashboardCard.vue";
+import EditModal from "../components/EditModal.vue";
+import DeleteModal from "../components/DeleteModal.vue";
 
 import {
   employeeColumns,
   employeeData
 } from "../data/employee.js";
 
-// =======================
-// Dashboard Cards
-// =======================
+// ===============================
+// Local Storage
+// ===============================
 
-const totalSalary = computed(() => {
+const STORAGE_KEY = "employeeData";
+
+onMounted(() => {
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+
+  if(saved){
+
+    employeeData.value = JSON.parse(saved);
+
+  }
+
+});
+
+watch(
+
+  employeeData,
+
+  (value)=>{
+
+    localStorage.setItem(
+
+      STORAGE_KEY,
+
+      JSON.stringify(value)
+
+    );
+
+  },
+
+  {deep:true}
+
+);
+
+// ===============================
+// Dashboard
+// ===============================
+
+const totalSalary = computed(()=>{
+
   return employeeData.value.reduce(
-    (sum, emp) => sum + Number(emp.salary),
+
+    (sum,emp)=>sum+Number(emp.salary),
+
     0
-  );
-});
 
-const departmentCount = computed(() => {
-  const departments = new Set(
-    employeeData.value.map(emp => emp.department)
   );
 
-  return departments.size;
 });
 
-// =======================
+const departmentCount = computed(()=>{
+
+  return new Set(
+
+    employeeData.value.map(
+
+      emp=>emp.department
+
+    )
+
+  ).size;
+
+});
+
+const averageSalary = computed(()=>{
+
+  if(employeeData.value.length===0)
+
+    return 0;
+
+  return Math.round(
+
+    totalSalary.value/
+
+    employeeData.value.length
+
+  );
+
+});
+
+// ===============================
 // Add Employee
-// =======================
+// ===============================
 
 const newEmployee = ref({
 
-  name: "",
-
-  department: "",
-
-  salary: "",
-
-  tax: "",
-
-  netPay: ""
+  id:"",
+  name:"",
+  department:"",
+  salary:"",
+  tax:"",
+  netPay:""
 
 });
 
-function addEmployee() {
+function addEmployee(){
 
-  if (
+  if(
 
     !newEmployee.value.name ||
 
     !newEmployee.value.department ||
 
-    !newEmployee.value.salary ||
+    newEmployee.value.salary==="" ||
 
-    !newEmployee.value.tax ||
+    newEmployee.value.tax==="" ||
 
-    !newEmployee.value.netPay
+    newEmployee.value.netPay===""
 
-  ) {
+  ){
 
     alert("Please fill all fields.");
 
@@ -157,92 +247,119 @@ function addEmployee() {
 
   employeeData.value.push({
 
-    name: newEmployee.value.name,
+    id:Date.now(),
 
-    department: newEmployee.value.department,
+    name:newEmployee.value.name,
 
-    salary: Number(newEmployee.value.salary),
+    department:newEmployee.value.department,
 
-    tax: Number(newEmployee.value.tax),
+    salary:Number(newEmployee.value.salary),
 
-    netPay: Number(newEmployee.value.netPay)
+    tax:Number(newEmployee.value.tax),
+
+    netPay:Number(newEmployee.value.netPay)
 
   });
 
-  newEmployee.value = {
+  newEmployee.value={
 
-    name: "",
+    id:"",
 
-    department: "",
+    name:"",
 
-    salary: "",
+    department:"",
 
-    tax: "",
+    salary:"",
 
-    netPay: ""
+    tax:"",
+
+    netPay:""
 
   };
 
   alert("Employee Added Successfully!");
 
 }
-
-// =======================
+// ===============================
 // Edit Employee
-// =======================
+// ===============================
 
-function editEmployee(row) {
+const showEdit = ref(false);
 
-  const name = prompt("Employee Name", row.name);
-  if (name === null) return;
+const selectedEmployee = ref({});
 
-  const department = prompt("Department", row.department);
-  if (department === null) return;
+function openEdit(row){
 
-  const salary = prompt("Salary", row.salary);
-  if (salary === null) return;
+  selectedEmployee.value = {
 
-  const tax = prompt("Tax", row.tax);
-  if (tax === null) return;
+    ...row
 
-  const netPay = prompt("Net Pay", row.netPay);
-  if (netPay === null) return;
+  };
 
-  row.name = name;
-  row.department = department;
-  row.salary = Number(salary);
-  row.tax = Number(tax);
-  row.netPay = Number(netPay);
-
-  alert("Employee Updated Successfully!");
+  showEdit.value = true;
 
 }
 
-// =======================
-// Delete Employee
-// =======================
-
-function deleteEmployee(row) {
-
-  const confirmDelete = confirm(
-    `Delete "${row.name}"?`
-  );
-
-  if (!confirmDelete) return;
+function saveEmployee(updatedEmployee){
 
   const index = employeeData.value.findIndex(
-    emp => emp.name === row.name
+
+    emp => emp.id === updatedEmployee.id
+
   );
 
-  if (index !== -1) {
+  if(index !== -1){
 
-    employeeData.value.splice(index, 1);
+    employeeData.value[index] = {
 
-    alert("Employee Deleted Successfully!");
+      ...updatedEmployee
+
+    };
+
+    alert("Employee updated successfully!");
 
   }
 
+  showEdit.value = false;
+
 }
+
+// ===============================
+// Delete Employee
+// ===============================
+
+const showDelete = ref(false);
+
+const employeeToDelete = ref(null);
+
+function openDelete(row){
+
+  employeeToDelete.value = row;
+
+  showDelete.value = true;
+
+}
+
+function deleteEmployee(){
+
+  const index = employeeData.value.findIndex(
+
+    emp => emp.id === employeeToDelete.value.id
+
+  );
+
+  if(index !== -1){
+
+    employeeData.value.splice(index,1);
+
+    alert("Employee deleted successfully!");
+
+  }
+
+  showDelete.value = false;
+
+}
+
 </script>
 
 <style scoped>
@@ -266,83 +383,49 @@ function deleteEmployee(row) {
 }
 
 .form-card{
-
     background:white;
-
     padding:25px;
-
     border-radius:15px;
-
     margin-bottom:30px;
-
     box-shadow:0 10px 25px rgba(0,0,0,.08);
-
 }
 
 .form-card h2{
-
     margin-bottom:20px;
-
 }
 
 .form-grid{
-
     display:grid;
-
     grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-
     gap:15px;
-
     margin-bottom:20px;
-
 }
 
 .form-grid input{
-
     padding:12px;
-
     border:1px solid #d1d5db;
-
     border-radius:8px;
-
-    font-size:15px;
-
     outline:none;
-
+    font-size:15px;
 }
 
 .form-grid input:focus{
-
     border-color:#2563eb;
-
     box-shadow:0 0 6px rgba(37,99,235,.3);
-
 }
 
 .btn-success{
-
     background:#16a34a;
-
     color:white;
-
     border:none;
-
     padding:12px 22px;
-
     border-radius:8px;
-
     cursor:pointer;
-
-    font-size:15px;
-
     font-weight:600;
-
 }
 
 .btn-success:hover{
-
     background:#15803d;
-
 }
 
 </style>

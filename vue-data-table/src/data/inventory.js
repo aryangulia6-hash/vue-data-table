@@ -8,19 +8,109 @@ export const inventoryColumns = [
 ];
 
 export const inventoryData = ref([
-  { product: "Laptop", sku: "L1001", stock: 15, location: "Warehouse A" },
-  { product: "Mouse", sku: "M1002", stock: 60, location: "Warehouse B" },
-  { product: "Keyboard", sku: "K1003", stock: 35, location: "Warehouse A" },
-  { product: "Monitor", sku: "M1004", stock: 20, location: "Warehouse C" },
-  { product: "Printer", sku: "P1005", stock: 10, location: "Warehouse B" },
-  { product: "Scanner", sku: "S1006", stock: 18, location: "Warehouse A" },
-  { product: "Webcam", sku: "W1007", stock: 40, location: "Warehouse C" },
-  { product: "Speaker", sku: "SP1008", stock: 25, location: "Warehouse A" },
-  { product: "Hard Disk", sku: "H1009", stock: 50, location: "Warehouse B" },
-  { product: "SSD", sku: "SSD1010", stock: 28, location: "Warehouse C" },
-  { product: "RAM", sku: "R1011", stock: 70, location: "Warehouse A" },
-  { product: "CPU", sku: "C1012", stock: 14, location: "Warehouse B" },
-  { product: "GPU", sku: "G1013", stock: 8, location: "Warehouse C" },
-  { product: "UPS", sku: "U1014", stock: 22, location: "Warehouse A" },
-  { product: "Projector", sku: "PR1015", stock: 6, location: "Warehouse B" }
+  {
+    id: 1,
+    product: "Laptop",
+    sku: "LAP001",
+    stock: 25,
+    location: "Warehouse A"
+  },
+  {
+    id: 2,
+    product: "Mouse",
+    sku: "MOU002",
+    stock: 120,
+    location: "Warehouse A"
+  },
+  {
+    id: 3,
+    product: "Keyboard",
+    sku: "KEY003",
+    stock: 80,
+    location: "Warehouse B"
+  },
+  {
+    id: 4,
+    product: "Monitor",
+    sku: "MON004",
+    stock: 35,
+    location: "Warehouse B"
+  },
+  {
+    id: 5,
+    product: "Printer",
+    sku: "PRI005",
+    stock: 15,
+    location: "Warehouse C"
+  },
+  {
+    id: 6,
+    product: "Scanner",
+    sku: "SCA006",
+    stock: 18,
+    location: "Warehouse C"
+  },
+  {
+    id: 7,
+    product: "Projector",
+    sku: "PRO007",
+    stock: 10,
+    location: "Warehouse A"
+  },
+  {
+    id: 8,
+    product: "Router",
+    sku: "ROU008",
+    stock: 45,
+    location: "Warehouse B"
+  },
+  {
+    id: 9,
+    product: "Switch",
+    sku: "SWT009",
+    stock: 40,
+    location: "Warehouse A"
+  },
+  {
+    id: 10,
+    product: "Webcam",
+    sku: "WEB010",
+    stock: 55,
+    location: "Warehouse C"
+  },
+  {
+    id: 11,
+    product: "Headphones",
+    sku: "HEA011",
+    stock: 65,
+    location: "Warehouse A"
+  },
+  {
+    id: 12,
+    product: "External Hard Drive",
+    sku: "HDD012",
+    stock: 22,
+    location: "Warehouse B"
+  },
+  {
+    id: 13,
+    product: "USB Drive",
+    sku: "USB013",
+    stock: 150,
+    location: "Warehouse C"
+  },
+  {
+    id: 14,
+    product: "Graphics Card",
+    sku: "GPU014",
+    stock: 12,
+    location: "Warehouse A"
+  },
+  {
+    id: 15,
+    product: "RAM Module",
+    sku: "RAM015",
+    stock: 75,
+    location: "Warehouse B"
+  }
 ]);

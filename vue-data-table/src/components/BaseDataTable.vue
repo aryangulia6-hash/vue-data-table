@@ -14,20 +14,18 @@
     <table>
 
       <thead>
-
         <tr>
 
           <th
             v-for="column in columns"
             :key="column.key"
-            @click="sortBy(column.key)"
             class="sortable"
+            @click="sortBy(column.key)"
           >
-
             {{ column.label }}
 
             <span v-if="sortKey === column.key">
-              {{ sortDirection === 'asc' ? ' ▲' : ' ▼' }}
+              {{ sortDirection === 'asc' ? '▲' : '▼' }}
             </span>
 
           </th>
@@ -35,7 +33,6 @@
           <th>Actions</th>
 
         </tr>
-
       </thead>
 
       <tbody>
@@ -50,8 +47,6 @@
             :key="column.key"
           >
 
-            <!-- Scoped Slot -->
-
             <slot
               :name="column.key"
               :row="row"
@@ -63,18 +58,18 @@
 
           </td>
 
-          <td>
+          <td class="action-buttons">
 
             <button
               class="btn btn-edit"
-              @click="$emit('edit',row)"
+              @click="$emit('edit', row)"
             >
               ✏ Edit
             </button>
 
             <button
               class="btn btn-delete"
-              @click="$emit('delete',row)"
+              @click="$emit('delete', row)"
             >
               🗑 Delete
             </button>
@@ -83,15 +78,13 @@
 
         </tr>
 
-        <tr v-if="paginatedRows.length===0">
+        <tr v-if="paginatedRows.length === 0">
 
           <td
-            :colspan="columns.length+1"
-            style="text-align:center;padding:25px;"
+            :colspan="columns.length + 1"
+            class="no-data"
           >
-
             No Data Found
-
           </td>
 
         </tr>
@@ -106,7 +99,7 @@
 
       <button
         @click="previousPage"
-        :disabled="currentPage===1"
+        :disabled="currentPage === 1"
       >
         ◀ Previous
       </button>
@@ -123,7 +116,7 @@
 
       <button
         @click="nextPage"
-        :disabled="currentPage===totalPages"
+        :disabled="currentPage === totalPages"
       >
         Next ▶
       </button>
@@ -137,54 +130,46 @@
 import { ref, computed, watch } from "vue";
 
 const props = defineProps({
-
-  columns:{
-    type:Array,
-    required:true
+  columns: {
+    type: Array,
+    required: true
   },
 
-  rows:{
-    type:Array,
-    required:true
+  rows: {
+    type: Array,
+    required: true
   }
-
 });
 
-defineEmits([
-  "edit",
-  "delete"
-]);
+defineEmits(["edit", "delete"]);
 
 // =======================
 // Search
 // =======================
 
-const search=ref("");
+const search = ref("");
 
 // =======================
 // Sorting
 // =======================
 
-const sortKey=ref("");
+const sortKey = ref("");
 
-const sortDirection=ref("asc");
+const sortDirection = ref("asc");
 
-function sortBy(key){
+function sortBy(key) {
 
-  if(sortKey.value===key){
+  if (sortKey.value === key) {
 
-    sortDirection.value=
-      sortDirection.value==="asc"
-      ?"desc"
-      :"asc";
+    sortDirection.value =
+      sortDirection.value === "asc"
+        ? "desc"
+        : "asc";
 
-  }
+  } else {
 
-  else{
-
-    sortKey.value=key;
-
-    sortDirection.value="asc";
+    sortKey.value = key;
+    sortDirection.value = "asc";
 
   }
 
@@ -194,21 +179,16 @@ function sortBy(key){
 // Filter
 // =======================
 
-const filteredRows=computed(()=>{
+const filteredRows = computed(() => {
 
-  if(!search.value) return props.rows;
+  if (!search.value) return props.rows;
 
-  return props.rows.filter(row=>{
-
-    return Object.values(row)
-
+  return props.rows.filter(row =>
+    Object.values(row)
       .join(" ")
-
       .toLowerCase()
-
-      .includes(search.value.toLowerCase());
-
-  });
+      .includes(search.value.toLowerCase())
+  );
 
 });
 
@@ -216,21 +196,29 @@ const filteredRows=computed(()=>{
 // Sort
 // =======================
 
-const sortedRows=computed(()=>{
+const sortedRows = computed(() => {
 
-  const data=[...filteredRows.value];
+  const data = [...filteredRows.value];
 
-  if(!sortKey.value) return data;
+  if (!sortKey.value) return data;
 
-  return data.sort((a,b)=>{
+  return data.sort((a, b) => {
 
-    if(a[sortKey.value]<b[sortKey.value])
+    if (a[sortKey.value] < b[sortKey.value]) {
 
-      return sortDirection.value==="asc"?-1:1;
+      return sortDirection.value === "asc"
+        ? -1
+        : 1;
 
-    if(a[sortKey.value]>b[sortKey.value])
+    }
 
-      return sortDirection.value==="asc"?1:-1;
+    if (a[sortKey.value] > b[sortKey.value]) {
+
+      return sortDirection.value === "asc"
+        ? 1
+        : -1;
+
+    }
 
     return 0;
 
@@ -242,72 +230,75 @@ const sortedRows=computed(()=>{
 // Pagination
 // =======================
 
-const rowsPerPage=5;
+const rowsPerPage = 5;
 
-const currentPage=ref(1);
+const currentPage = ref(1);
 
-const totalPages=computed(()=>{
+const totalPages = computed(() => {
 
   return Math.max(
-
     1,
-
-    Math.ceil(sortedRows.value.length/rowsPerPage)
-
+    Math.ceil(
+      sortedRows.value.length / rowsPerPage
+    )
   );
 
 });
 
-const paginatedRows=computed(()=>{
+const paginatedRows = computed(() => {
 
-  const start=(currentPage.value-1)*rowsPerPage;
+  const start =
+    (currentPage.value - 1) * rowsPerPage;
 
   return sortedRows.value.slice(
-
     start,
-
-    start+rowsPerPage
-
+    start + rowsPerPage
   );
 
 });
 
-function nextPage(){
+function nextPage() {
 
-  if(currentPage.value<totalPages.value)
+  if (currentPage.value < totalPages.value) {
 
     currentPage.value++;
 
+  }
+
 }
 
-function previousPage(){
+function previousPage() {
 
-  if(currentPage.value>1)
+  if (currentPage.value > 1) {
 
     currentPage.value--;
 
+  }
+
 }
 
-// Reset page after search/delete/add
+// =======================
+// Watchers
+// =======================
+
+watch(search, () => {
+
+  currentPage.value = 1;
+
+});
 
 watch(
   () => sortedRows.value.length,
   () => {
 
-    if(currentPage.value>totalPages.value){
+    if (currentPage.value > totalPages.value) {
 
-      currentPage.value=totalPages.value;
+      currentPage.value = totalPages.value;
 
     }
 
   }
 );
-
-watch(search,()=>{
-
-  currentPage.value=1;
-
-});
 
 </script>
 
@@ -337,11 +328,13 @@ watch(search,()=>{
 
     padding:12px 15px;
 
-    border:1px solid #ccc;
+    border:1px solid #d1d5db;
 
     border-radius:8px;
 
     outline:none;
+
+    font-size:15px;
 
 }
 
@@ -375,6 +368,8 @@ th{
 
     user-select:none;
 
+    text-align:left;
+
 }
 
 td{
@@ -391,6 +386,14 @@ tbody tr:hover{
 
 }
 
+.action-buttons{
+
+    display:flex;
+
+    gap:10px;
+
+}
+
 .btn{
 
     border:none;
@@ -402,8 +405,6 @@ tbody tr:hover{
     border-radius:8px;
 
     cursor:pointer;
-
-    margin-right:8px;
 
     transition:.25s;
 
@@ -462,6 +463,40 @@ tbody tr:hover{
     background:#9ca3af;
 
     cursor:not-allowed;
+
+}
+
+.no-data{
+
+    text-align:center;
+
+    padding:25px;
+
+    color:#6b7280;
+
+}
+
+@media(max-width:768px){
+
+table{
+
+    display:block;
+
+    overflow-x:auto;
+
+}
+
+.search-box input{
+
+    width:100%;
+
+}
+
+.action-buttons{
+
+    flex-direction:column;
+
+}
 
 }
 

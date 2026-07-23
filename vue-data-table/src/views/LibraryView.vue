@@ -1,9 +1,10 @@
 <template>
   <div class="container">
 
-    <h1 class="page-title">📚 Library Catalog</h1>
+    <h1 class="page-title">📚 Library Management</h1>
 
-    <!-- Dashboard Cards -->
+    <!-- Dashboard -->
+
     <div class="cards">
 
       <DashboardCard
@@ -13,20 +14,26 @@
       />
 
       <DashboardCard
-        title="Available Books"
+        title="Available"
         :value="availableBooks"
         icon="✅"
       />
 
       <DashboardCard
-        title="Issued Books"
+        title="Issued"
         :value="issuedBooks"
         icon="📕"
       />
 
+      <DashboardCard
+        title="Genres"
+        :value="genreCount"
+        icon="🏷️"
+      />
+
     </div>
 
-    <!-- Add Book Form -->
+    <!-- Add Book -->
 
     <div class="form-card">
 
@@ -52,13 +59,17 @@
         <input
           v-model="newBook.year"
           type="number"
-          placeholder="Publication Year"
+          placeholder="Year"
         />
 
         <select v-model="newBook.status">
+
           <option value="">Select Status</option>
+
           <option>Available</option>
+
           <option>Issued</option>
+
         </select>
 
       </div>
@@ -67,7 +78,7 @@
         class="btn-success"
         @click="addBook"
       >
-        Add Book
+        + Add Book
       </button>
 
     </div>
@@ -77,8 +88,8 @@
     <BaseDataTable
       :columns="libraryColumns"
       :rows="libraryData"
-      @edit="editBook"
-      @delete="deleteBook"
+      @edit="openEdit"
+      @delete="openDelete"
     >
 
       <template #status="{ row }">
@@ -97,39 +108,124 @@
 
     </BaseDataTable>
 
+    <!-- Edit Modal -->
+
+    <EditModal
+      :show="showEdit"
+      :row="selectedBook"
+      :columns="libraryColumns"
+      @save="saveBook"
+      @close="showEdit = false"
+    />
+
+    <!-- Delete Modal -->
+
+    <DeleteModal
+      :show="showDelete"
+      @confirm="deleteBook"
+      @close="showDelete = false"
+    />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  onMounted
+} from "vue";
 
 import BaseDataTable from "../components/BaseDataTable.vue";
 import DashboardCard from "../components/DashboardCard.vue";
+import EditModal from "../components/EditModal.vue";
+import DeleteModal from "../components/DeleteModal.vue";
 
 import {
   libraryColumns,
   libraryData
 } from "../data/library.js";
 
-// =======================
-// Dashboard Cards
-// =======================
+// ======================
+// Local Storage
+// ======================
+
+const STORAGE_KEY = "libraryData";
+
+onMounted(() => {
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+
+  if (saved) {
+
+    libraryData.value = JSON.parse(saved);
+
+  }
+
+});
+
+watch(
+
+  libraryData,
+
+  (value) => {
+
+    localStorage.setItem(
+
+      STORAGE_KEY,
+
+      JSON.stringify(value)
+
+    );
+
+  },
+
+  { deep: true }
+
+);
+
+// ======================
+// Dashboard
+// ======================
 
 const availableBooks = computed(() =>
+
   libraryData.value.filter(
+
     book => book.status === "Available"
+
   ).length
+
 );
 
 const issuedBooks = computed(() =>
+
   libraryData.value.filter(
+
     book => book.status === "Issued"
+
   ).length
+
 );
 
-// =======================
+const genreCount = computed(() =>
+
+  new Set(
+
+    libraryData.value.map(
+
+      book => book.genre
+
+    )
+
+  ).size
+
+);
+
+// ======================
 // Add Book
-// =======================
+// ======================
 
 const newBook = ref({
 
@@ -145,9 +241,9 @@ const newBook = ref({
 
 });
 
-function addBook(){
+function addBook() {
 
-  if(
+  if (
 
     !newBook.value.book ||
 
@@ -159,7 +255,7 @@ function addBook(){
 
     !newBook.value.status
 
-  ){
+  ) {
 
     alert("Please fill all fields.");
 
@@ -169,95 +265,114 @@ function addBook(){
 
   libraryData.value.push({
 
-    book:newBook.value.book,
+    id: Date.now(),
 
-    author:newBook.value.author,
+    book: newBook.value.book,
 
-    genre:newBook.value.genre,
+    author: newBook.value.author,
 
-    year:Number(newBook.value.year),
+    genre: newBook.value.genre,
 
-    status:newBook.value.status
+    year: Number(newBook.value.year),
+
+    status: newBook.value.status
 
   });
 
-  newBook.value={
+  newBook.value = {
 
-    book:"",
+    book: "",
 
-    author:"",
+    author: "",
 
-    genre:"",
+    genre: "",
 
-    year:"",
+    year: "",
 
-    status:""
+    status: ""
 
   };
 
-  alert("Book Added Successfully!");
-
 }
 
-// =======================
+// ======================
 // Edit Book
-// =======================
+// ======================
 
-function editBook(row){
+const showEdit = ref(false);
 
-  const book = prompt("Book Name", row.book);
-  if(book===null) return;
+const selectedBook = ref(null);
 
-  const author = prompt("Author", row.author);
-  if(author===null) return;
+function openEdit(row){
 
-  const genre = prompt("Genre", row.genre);
-  if(genre===null) return;
+  selectedBook.value = { ...row };
 
-  const year = prompt("Publication Year", row.year);
-  if(year===null) return;
-
-  const status = prompt(
-    "Status (Available / Issued)",
-    row.status
-  );
-  if(status===null) return;
-
-  row.book = book;
-  row.author = author;
-  row.genre = genre;
-  row.year = Number(year);
-  row.status = status;
-
-  alert("Book Updated Successfully!");
+  showEdit.value = true;
 
 }
 
-// =======================
-// Delete Book
-// =======================
-
-function deleteBook(row){
-
-  const confirmDelete = confirm(
-    `Delete "${row.book}" ?`
-  );
-
-  if(!confirmDelete) return;
+function saveBook(updatedBook){
 
   const index = libraryData.value.findIndex(
-    item => item.book === row.book
+
+    book => book.id === updatedBook.id
+
+  );
+
+  if(index !== -1){
+
+    Object.assign(
+
+      libraryData.value[index],
+
+      updatedBook
+
+    );
+
+    alert("Book updated successfully!");
+
+  }
+
+  showEdit.value = false;
+
+}
+
+// ======================
+// Delete Book
+// ======================
+
+const showDelete = ref(false);
+
+const bookToDelete = ref(null);
+
+function openDelete(row){
+
+  bookToDelete.value = row;
+
+  showDelete.value = true;
+
+}
+
+function deleteBook(){
+
+  const index = libraryData.value.findIndex(
+
+    book => book.id === bookToDelete.value.id
+
   );
 
   if(index !== -1){
 
     libraryData.value.splice(index,1);
 
-    alert("Book Deleted Successfully!");
+    alert("Book deleted successfully!");
 
   }
 
+  showDelete.value = false;
+
 }
+
 </script>
 
 <style scoped>
@@ -304,8 +419,8 @@ function deleteBook(row){
     padding:12px;
     border:1px solid #d1d5db;
     border-radius:8px;
-    font-size:15px;
     outline:none;
+    font-size:15px;
 }
 
 .form-grid input:focus,

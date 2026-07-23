@@ -3,11 +3,12 @@
 
     <h1 class="page-title">📦 Inventory Management</h1>
 
-    <!-- Dashboard Cards -->
+    <!-- Dashboard -->
+
     <div class="cards">
 
       <DashboardCard
-        title="Total Products"
+        title="Products"
         :value="inventoryData.length"
         icon="📦"
       />
@@ -24,13 +25,19 @@
         icon="🏢"
       />
 
+      <DashboardCard
+        title="Average Stock"
+        :value="averageStock"
+        icon="📊"
+      />
+
     </div>
 
-    <!-- Add Product Form -->
+    <!-- Add Product -->
 
     <div class="form-card">
 
-      <h2>Add New Product</h2>
+      <h2>Add Product</h2>
 
       <div class="form-grid">
 
@@ -45,8 +52,8 @@
         />
 
         <input
-          v-model="newProduct.stock"
           type="number"
+          v-model="newProduct.stock"
           placeholder="Stock"
         />
 
@@ -61,7 +68,7 @@
         class="btn-success"
         @click="addProduct"
       >
-        Add Product
+        + Add Product
       </button>
 
     </div>
@@ -71,71 +78,129 @@
     <BaseDataTable
       :columns="inventoryColumns"
       :rows="inventoryData"
-      @edit="editItem"
-      @delete="deleteItem"
+      @edit="openEdit"
+      @delete="openDelete"
+    />
+
+    <!-- Edit Modal -->
+
+    <EditModal
+      :show="showEdit"
+      :row="selectedProduct"
+      :columns="inventoryColumns"
+      @save="saveProduct"
+      @close="showEdit=false"
+    />
+
+    <!-- Delete Modal -->
+
+    <DeleteModal
+      :show="showDelete"
+      @confirm="deleteProduct"
+      @close="showDelete=false"
     />
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 
 import BaseDataTable from "../components/BaseDataTable.vue";
 import DashboardCard from "../components/DashboardCard.vue";
+import EditModal from "../components/EditModal.vue";
+import DeleteModal from "../components/DeleteModal.vue";
 
 import {
   inventoryColumns,
   inventoryData
 } from "../data/inventory.js";
 
-// ===========================
-// Dashboard Cards
-// ===========================
+// =====================
+// Local Storage
+// =====================
 
-const totalStock = computed(() => {
+const STORAGE_KEY = "inventoryData";
 
-  return inventoryData.value.reduce(
+onMounted(() => {
 
+  const saved = localStorage.getItem(STORAGE_KEY);
+
+  if (saved) {
+
+    inventoryData.value = JSON.parse(saved);
+
+  }
+
+});
+
+watch(
+  inventoryData,
+  (value) => {
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(value)
+    );
+
+  },
+  { deep: true }
+);
+
+// =====================
+// Dashboard
+// =====================
+
+const totalStock = computed(() =>
+
+  inventoryData.value.reduce(
     (sum, item) => sum + Number(item.stock),
-
     0
+  )
+
+);
+
+const warehouseCount = computed(() =>
+
+  new Set(
+    inventoryData.value.map(
+      item => item.location
+    )
+  ).size
+
+);
+
+const averageStock = computed(() => {
+
+  if (inventoryData.value.length === 0)
+    return 0;
+
+  return Math.round(
+
+    totalStock.value /
+
+    inventoryData.value.length
 
   );
 
 });
 
-const warehouseCount = computed(() => {
-
-  const warehouses = new Set(
-
-    inventoryData.value.map(item => item.location)
-
-  );
-
-  return warehouses.size;
-
-});
-
-// ===========================
+// =====================
 // Add Product
-// ===========================
+// =====================
 
 const newProduct = ref({
 
   product: "",
-
   sku: "",
-
   stock: "",
-
   location: ""
 
 });
 
-function addProduct(){
+function addProduct() {
 
-  if(
+  if (
 
     !newProduct.value.product ||
 
@@ -145,7 +210,7 @@ function addProduct(){
 
     !newProduct.value.location
 
-  ){
+  ) {
 
     alert("Please fill all fields.");
 
@@ -155,84 +220,110 @@ function addProduct(){
 
   inventoryData.value.push({
 
-    product:newProduct.value.product,
+    id: Date.now(),
 
-    sku:newProduct.value.sku,
+    product: newProduct.value.product,
 
-    stock:Number(newProduct.value.stock),
+    sku: newProduct.value.sku,
 
-    location:newProduct.value.location
+    stock: Number(newProduct.value.stock),
+
+    location: newProduct.value.location
 
   });
 
-  newProduct.value={
+  newProduct.value = {
 
-    product:"",
+    product: "",
 
-    sku:"",
+    sku: "",
 
-    stock:"",
+    stock: "",
 
-    location:""
+    location: ""
 
   };
 
-  alert("Product Added Successfully!");
-
 }
 
-// ===========================
+// =====================
 // Edit Product
-// ===========================
+// =====================
 
-function editItem(row){
+const showEdit = ref(false);
 
-  const product = prompt("Product Name",row.product);
-  if(product===null) return;
+const selectedProduct = ref(null);
 
-  const sku = prompt("SKU",row.sku);
-  if(sku===null) return;
+function openEdit(row) {
 
-  const stock = prompt("Stock",row.stock);
-  if(stock===null) return;
+  selectedProduct.value = { ...row };
 
-  const location = prompt("Warehouse",row.location);
-  if(location===null) return;
-
-  row.product=product;
-  row.sku=sku;
-  row.stock=Number(stock);
-  row.location=location;
-
-  alert("Product Updated Successfully!");
+  showEdit.value = true;
 
 }
 
-// ===========================
-// Delete Product
-// ===========================
+function saveProduct(updatedProduct) {
 
-function deleteItem(row){
+  const index = inventoryData.value.findIndex(
 
-  const confirmDelete=confirm(
-    `Delete "${row.product}" ?`
+    item => item.id === updatedProduct.id
+
   );
 
-  if(!confirmDelete) return;
+  if (index !== -1) {
 
-  const index=inventoryData.value.findIndex(
-    item=>item.product===row.product
-  );
+    Object.assign(
 
-  if(index!==-1){
+      inventoryData.value[index],
 
-    inventoryData.value.splice(index,1);
+      updatedProduct
 
-    alert("Product Deleted Successfully!");
+    );
+
+    alert("Product updated successfully!");
 
   }
 
+  showEdit.value = false;
+
 }
+
+// =====================
+// Delete Product
+// =====================
+
+const showDelete = ref(false);
+
+const productToDelete = ref(null);
+
+function openDelete(row) {
+
+  productToDelete.value = row;
+
+  showDelete.value = true;
+
+}
+
+function deleteProduct() {
+
+  const index = inventoryData.value.findIndex(
+
+    item => item.id === productToDelete.value.id
+
+  );
+
+  if (index !== -1) {
+
+    inventoryData.value.splice(index, 1);
+
+    alert("Product deleted successfully!");
+
+  }
+
+  showDelete.value = false;
+
+}
+
 </script>
 
 <style scoped>
@@ -244,8 +335,8 @@ function deleteItem(row){
 
 .page-title{
     font-size:34px;
-    color:#1f2937;
     margin-bottom:25px;
+    color:#1f2937;
 }
 
 .cards{
@@ -256,83 +347,49 @@ function deleteItem(row){
 }
 
 .form-card{
-
     background:white;
-
     padding:25px;
-
     border-radius:15px;
-
     margin-bottom:30px;
-
     box-shadow:0 10px 25px rgba(0,0,0,.08);
-
 }
 
 .form-card h2{
-
     margin-bottom:20px;
-
 }
 
 .form-grid{
-
     display:grid;
-
     grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-
     gap:15px;
-
     margin-bottom:20px;
-
 }
 
 .form-grid input{
-
     padding:12px;
-
     border:1px solid #d1d5db;
-
     border-radius:8px;
-
-    font-size:15px;
-
     outline:none;
-
+    font-size:15px;
 }
 
 .form-grid input:focus{
-
     border-color:#2563eb;
-
     box-shadow:0 0 6px rgba(37,99,235,.3);
-
 }
 
 .btn-success{
-
     background:#16a34a;
-
     color:white;
-
     border:none;
-
     padding:12px 22px;
-
     border-radius:8px;
-
     cursor:pointer;
-
-    font-size:15px;
-
     font-weight:600;
-
 }
 
 .btn-success:hover{
-
     background:#15803d;
-
 }
 
 </style>
